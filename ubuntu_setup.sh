@@ -130,7 +130,94 @@ sudo apt-get install -f -y
 rm dbeaver.deb
 success_msg "DBeaver yükləndi"
 
-# 9. Əlavə faydalı proqramlar
+# 9. GitHub SSH key konfiqurasiyası
+info_msg "GitHub SSH key konfiqurasiyası..."
+
+# İstifadəçidən email al
+echo ""
+echo -e "${YELLOW}GitHub SSH key yaratmaq üçün email lazımdır.${NC}"
+read -p "GitHub email adresinizi daxil edin: " github_email
+
+if [ -n "$github_email" ]; then
+    # İstifadəçi adını da al
+    read -p "GitHub istifadəçi adınızı daxil edin: " github_username
+    
+    # Git global konfiqurasiya
+    if [ -n "$github_username" ]; then
+        git config --global user.name "$github_username"
+        git config --global user.email "$github_email"
+        success_msg "Git konfiqurasiya edildi"
+    fi
+    
+    # SSH key yarad
+    ssh-keygen -t ed25519 -C "$github_email" -f ~/.ssh/id_ed25519 -N ""
+    
+    # SSH agent-i başlat
+    eval "$(ssh-agent -s)"
+    
+    # SSH key-i agent-ə əlavə et
+    ssh-add ~/.ssh/id_ed25519
+    
+    # SSH config faylı yarat
+    mkdir -p ~/.ssh
+    cat > ~/.ssh/config << EOF
+Host github.com
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/id_ed25519
+EOF
+    
+    # Public key-i göstər
+    echo ""
+    echo -e "${GREEN}SSH Public Key (GitHub-a əlavə etmək üçün):${NC}"
+    echo "========================================"
+    cat ~/.ssh/id_ed25519.pub
+    echo "========================================"
+    echo ""
+    echo -e "${YELLOW}Bu key-i kopyalayın və GitHub-ın SSH keys bölməsinə əlavə edin:${NC}"
+    echo -e "${BLUE}1. GitHub.com-a daxil olun${NC}"
+    echo -e "${BLUE}2. Settings > SSH and GPG keys-ə gedin${NC}"
+    echo -e "${BLUE}3. 'New SSH key' düyməsini basın${NC}"
+    echo -e "${BLUE}4. Yuxarıdakı key-i yapışdırın${NC}"
+    echo ""
+    echo -e "${YELLOW}Davam etmək üçün Enter basın...${NC}"
+    read -p ""
+    
+    success_msg "SSH key yaradıldı və konfiqurasiya edildi"
+else
+    warning_msg "Email daxil edilmədi. SSH key yaradılmadı."
+fi
+
+# 10. Zsh və Oh My Zsh konfiqurasiyası
+info_msg "Zsh və Oh My Zsh yüklənir..."
+
+# Zsh yüklə
+sudo apt install -y zsh
+
+# Oh My Zsh yüklə (git lazımdır, artıq yükləmişik)
+sh -c "$(wget https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh -O -)" "" --unattended
+
+# Zsh-autosuggestions plugin yüklə
+git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
+
+# Zsh-syntax-highlighting plugin yüklə
+git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
+
+# .zshrc faylını konfiqurasiya et
+if [ -f ~/.zshrc ]; then
+    # Plugins əlavə et
+    sed -i 's/plugins=(git)/plugins=(git zsh-autosuggestions zsh-syntax-highlighting)/' ~/.zshrc
+    
+    # Tema dəyişdir (robbyrussell-dən agnoster-ə)
+    sed -i 's/ZSH_THEME="robbyrussell"/ZSH_THEME="agnoster"/' ~/.zshrc
+fi
+
+# Zsh-i default shell et
+chsh -s $(which zsh)
+
+success_msg "Zsh və Oh My Zsh yükləndi və konfiqurasiya edildi"
+
+# 11. Əlavə faydalı proqramlar
 info_msg "Əlavə faydalı proqramlar yüklənir..."
 sudo apt install -y \
     htop \
@@ -152,7 +239,7 @@ sudo apt install -y \
 
 success_msg "Əlavə proqramlar yükləndi"
 
-# 10. Sistem təmizliyi
+# 12. Sistem təmizliyi
 info_msg "Sistem təmizlənir..."
 sudo apt autoremove -y
 sudo apt autoclean
@@ -164,6 +251,8 @@ echo -e "${GREEN}🎉 Ubuntu setup tamamlandı!${NC}"
 echo ""
 warning_msg "Qeyd: Docker-i sudo olmadan işlətmək üçün sistemdən çıxıb yenidən daxil olun və ya aşağıdakı əmri yerinə yetirin:"
 echo -e "${YELLOW}newgrp docker${NC}"
+echo ""
+warning_msg "Zsh-i default shell olaraq istifadə etmək üçün sistemdən çıxıb yenidən daxil olun və ya yeni terminal açın."
 echo ""
 info_msg "Yüklənən proqramlar:"
 echo "✅ Docker & Docker Compose"
@@ -178,6 +267,18 @@ echo "✅ Steam"
 echo "✅ Notion"
 echo "✅ Slack"
 echo "✅ DBeaver"
+echo "✅ GitHub SSH key konfiqurasiyası"
+echo "✅ Git global konfiqurasiya"
+echo "✅ Zsh + Oh My Zsh + Plugins (autosuggestions, syntax-highlighting)"
 echo "✅ Digər faydalı alətlər"
+echo ""
+info_msg "Zsh özəllikləri:"
+echo "🔥 Agnoster theme"
+echo "🔥 Auto-suggestions (sağ ox ilə qəbul et)"
+echo "🔥 Syntax highlighting (doğru əmrlər yaşıl, səhv əmrlər qırmızı)"
+echo "🔥 Git integration"
+echo ""
+info_msg "GitHub SSH key test etmək üçün:"
+echo "🔑 ssh -T git@github.com"
 echo ""
 success_msg "Sisteminiz hazırdır! 🚀"
